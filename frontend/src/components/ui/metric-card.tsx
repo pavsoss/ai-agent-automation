@@ -15,6 +15,7 @@ export interface MetricCardProps {
   };
   footer?: ReactNode;
   loading?: boolean;
+  variant?: "default" | "badge";
   className?: string;
 }
 
@@ -26,9 +27,18 @@ export function MetricCard({
   trend,
   footer,
   loading,
+  variant = "default",
   className,
 }: MetricCardProps) {
   if (loading) {
+    if (variant === "badge") {
+      return (
+        <div className={cn("px-3 py-2 rounded-lg border border-border/20 bg-muted/20", className)}>
+          <div className="h-3 w-16 bg-muted/50 animate-pulse rounded mb-1" />
+          <div className="h-5 w-12 bg-muted/50 animate-pulse rounded" />
+        </div>
+      );
+    }
     return (
       <Card className={cn("p-5 flex flex-col justify-between border-border/30 bg-card/20 shadow-sm rounded-xl", className)}>
         <div className="flex items-center justify-between mb-4">
@@ -38,6 +48,25 @@ export function MetricCard({
         <div className="h-8 w-16 bg-muted/50 animate-pulse rounded mb-2" />
         <div className="h-3 w-32 bg-muted/50 animate-pulse rounded" />
       </Card>
+    );
+  }
+
+  if (variant === "badge") {
+    return (
+      <div
+        className={cn(
+          "px-4 py-3 rounded-lg border border-border/20 bg-muted/10",
+          "flex flex-col gap-1 min-w-fit",
+          className
+        )}
+      >
+        <div className="flex items-center gap-2">
+          {Icon && <Icon className="size-3 text-muted-foreground/50" aria-hidden="true" />}
+          <h3 className="text-xs font-medium text-muted-foreground/70">{title}</h3>
+        </div>
+        <p className="text-xl font-semibold text-foreground/95">{value}</p>
+        {subtitle && <p className="text-xs text-muted-foreground/60">{subtitle}</p>}
+      </div>
     );
   }
 

@@ -11,6 +11,9 @@ import { PageHeader } from "@/components/layout/page-header";
 import { AuthenticatedLayout } from "@/components/layout/authenticated-layout";
 import { MetricCard } from "@/components/ui/metric-card";
 import { MetricCardSkeleton, ListSkeleton } from "@/components/ui/skeletons";
+import { ExecutionChart } from "@/components/dashboard/execution-chart";
+import { SystemHealthPanel } from "@/components/dashboard/system-health";
+import { LiveActivityFeed } from "@/components/dashboard/live-activity-feed";
 import { Activity, Workflow, ListChecks, Bot, Calendar, Copy, Loader2, Check, X, Plus, FileText, Wand2, Link2 } from "lucide-react";
 import { useAssistantContext } from "@/context/assistant-context";
 import { useToast } from "@/hooks/use-toast";
@@ -179,168 +182,165 @@ function DashboardPageInner() {
   ------------------------------ */
   if (!isMounted) return null;
 
+  // Generate mock execution chart data
+  const chartData = [
+    { date: "Mon", executions: 342, success: 336, failed: 6 },
+    { date: "Tue", executions: 298, success: 293, failed: 5 },
+    { date: "Wed", executions: 315, success: 310, failed: 5 },
+    { date: "Thu", executions: 310, success: 305, failed: 5 },
+    { date: "Fri", executions: 398, success: 392, failed: 6 },
+    { date: "Sat", executions: 289, success: 285, failed: 4 },
+    { date: "Sun", executions: 512, success: 503, failed: 9 },
+  ];
+
   return (
     <>
       <PageHeader 
         title="Dashboard" 
         description="Overview of your AI automation workflows" 
       />
-          <div className="flex flex-col gap-8">
-            {/* Stats */}
-            <div className="mb-8 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-5">
-              {stats
-                ? statsUI.map((stat) => (
-                    <MetricCard
-                      key={stat.label}
-                      title={stat.label}
-                      value={stat.value}
-                      icon={stat.icon}
-                    />
-                  ))
-                : Array.from({ length: 5 }).map((_, i) => (
-                    <MetricCardSkeleton key={i} />
-                  ))}
-            </div>
+      <div className="flex flex-col gap-4">
+        {/* Compact Metrics Bar */}
+        <div className="flex flex-wrap gap-2">
+          {stats
+            ? statsUI.map((stat) => (
+                <MetricCard
+                  key={stat.label}
+                  title={stat.label}
+                  value={stat.value}
+                  icon={stat.icon}
+                  variant="badge"
+                />
+              ))
+            : Array.from({ length: 5 }).map((_, i) => (
+                <div key={i} className="px-4 py-3 rounded-lg border border-border/20 bg-muted/10">
+                  <div className="h-3 w-12 bg-muted/50 animate-pulse rounded mb-1" />
+                  <div className="h-5 w-16 bg-muted/50 animate-pulse rounded" />
+                </div>
+              ))}
+        </div>
 
-            {/* Split Grid Layout */}
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Charts and System Status Section */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+          {/* Execution Chart */}
+          <div className="lg:col-span-2">
+            <ExecutionChart
+              data={chartData}
+              loading={statsLoading}
+            />
+          </div>
+          {/* System Health */}
+          <div className="lg:col-span-1">
+            <SystemHealthPanel loading={statsLoading} />
+          </div>
+        </div>
 
-              {/* Left Side: Recently Modified (Workflows) */}
-              <div className="lg:col-span-2 flex">
-                <Card className="flex-1 flex flex-col border-border/30 bg-card/20 shadow-sm rounded-xl overflow-hidden">
-                  <div className="flex items-center justify-between p-5 border-b border-border/20">
-                    <h2 className="font-semibold text-foreground/90 tracking-tight">Recently Modified</h2>
-                    <Link href="/workflows" className="text-xs font-medium text-muted-foreground hover:text-foreground transition-colors">
-                      View all
-                    </Link>
+        {/* Main Content: Workflows Table and Live Feed */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+
+          {/* Left Side: Recently Modified (Workflows) */}
+          <div className="lg:col-span-2 flex">
+            <Card className="flex-1 flex flex-col border-border/30 bg-card/20 shadow-sm rounded-xl overflow-hidden">
+              <div className="flex items-center justify-between p-5 border-b border-border/20">
+                <h2 className="font-semibold text-foreground/90 tracking-tight">Recently Modified</h2>
+                <Link href="/workflows" className="text-xs font-medium text-muted-foreground hover:text-foreground transition-colors">
+                  View all
+                </Link>
+              </div>
+              
+              <div className="flex-1 p-0 overflow-x-auto">
+                <div className="min-w-[500px]">
+                  {/* Table header */}
+                  <div className="grid grid-cols-12 gap-4 px-5 py-3 border-b border-border/20 bg-muted/20 text-[10px] font-medium text-muted-foreground uppercase tracking-wider">
+                    <div className="col-span-6">Workflow Name</div>
+                    <div className="col-span-3">Status</div>
+                    <div className="col-span-3 text-right">Actions</div>
                   </div>
                   
-                  <div className="flex-1 p-0 overflow-x-auto">
-                    <div className="min-w-[500px]">
-                      {/* Table header */}
-                      <div className="grid grid-cols-12 gap-4 px-5 py-3 border-b border-border/20 bg-muted/20 text-[10px] font-medium text-muted-foreground uppercase tracking-wider">
-                        <div className="col-span-6">Workflow Name</div>
-                        <div className="col-span-3">Status</div>
-                        <div className="col-span-3 text-right">Actions</div>
-                      </div>
-                      
-                      <div className="divide-y divide-border/20">
-                        {workflowsLoading ? (
-                          <ListSkeleton rows={3} className="border-none divide-none" />
-                        ) : workflowsArray.length === 0 ? (
-                          <div className="p-5 text-sm text-muted-foreground opacity-70">No workflows yet</div>
-                        ) : (
-                          workflowsArray.slice(0, 5).map((wf: any) => (
-                            <div key={wf._id} className="grid grid-cols-12 gap-4 px-5 py-4 items-center group hover:bg-accent/20 transition-colors">
-                              <div className="col-span-6 flex items-center gap-3">
-                                <Workflow className="size-4 text-muted-foreground/50" />
-                                <span className="font-medium text-sm text-foreground/90">{wf.name}</span>
-                              </div>
-                              <div className="col-span-3">
-                                <StatusBadge
-                                  status={(wf.status || "draft").toLowerCase() as any}
-                                  variant="subtle"
-                                  className="uppercase text-[10px]"
-                                >
-                                  {wf.status || "DRAFT"}
-                                </StatusBadge>
-                              </div>
-                              <div className="col-span-3 flex justify-end">
-                                <Button
-                                  variant="ghost"
-                                  size="icon"
-                                  onClick={() => handleCloneWorkflow(wf._id)}
-                                  disabled={cloningId === wf._id}
-                                  title="Duplicate Workflow"
-                                  className="size-7 opacity-0 group-hover:opacity-100 transition-opacity"
-                                >
-                                  {cloningId === wf._id ? (
-                                    <Loader2 className="size-3 animate-spin text-muted-foreground" />
-                                  ) : (
-                                    <Copy className="size-3 text-muted-foreground" />
-                                  )}
-                                </Button>
-                              </div>
-                            </div>
-                          ))
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                </Card>
-              </div>
-
-              {/* Right Side: Live Feed (Activity) */}
-              <div className="lg:col-span-1 flex">
-                <Card className="flex-1 flex flex-col border-border/30 bg-card/20 shadow-sm rounded-xl overflow-hidden">
-                  <div className="p-5 border-b border-border/20">
-                    <h2 className="font-semibold text-foreground/90 tracking-tight">Live Feed</h2>
-                  </div>
-                  <div className="p-5 space-y-6">
-                    {tasksLoading ? (
-                      <ListSkeleton rows={5} className="border-none divide-none" />
-                    ) : recentTasks.length > 0 ? (
-                      recentTasks.map((task) => (
-                        <div key={task._id} className="flex gap-4 relative">
-                          <div className="flex flex-col items-center">
-                            <div className={cn(
-                              "flex items-center justify-center size-6 rounded-full border border-border/40 bg-background",
-                              task.status === "completed" ? "text-emerald-500" :
-                              task.status === "failed" ? "text-red-500" :
-                              "text-amber-500"
-                            )}>
-                              {task.status === "completed" ? <Check className="size-3" /> :
-                               task.status === "failed" ? <X className="size-3" /> :
-                               <Activity className="size-3" />}
-                            </div>
+                  <div className="divide-y divide-border/20">
+                    {workflowsLoading ? (
+                      <ListSkeleton rows={3} className="border-none divide-none" />
+                    ) : workflowsArray.length === 0 ? (
+                      <div className="p-5 text-sm text-muted-foreground opacity-70">No workflows yet</div>
+                    ) : (
+                      workflowsArray.slice(0, 5).map((wf: any) => (
+                        <div key={wf._id} className="grid grid-cols-12 gap-4 px-5 py-4 items-center group hover:bg-accent/20 transition-colors">
+                          <div className="col-span-6 flex items-center gap-3">
+                            <Workflow className="size-4 text-muted-foreground/50" />
+                            <span className="font-medium text-sm text-foreground/90">{wf.name}</span>
                           </div>
-                          
-                          <div className="flex flex-col gap-1 pb-1">
-                            <p className="text-xs text-muted-foreground">
-                              <span className="text-foreground/70 mr-1">
-                                {new Date(task.startedAt).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit', second:'2-digit'})} -
-                              </span>
-                              Workflow <span className="font-medium text-foreground/80">"{task.name}"</span> {task.status}
-                            </p>
-                            {task.metadata?.runningBy && (
-                              <p className="text-[10px] text-muted-foreground/50 font-mono mt-0.5">
-                                Connection: {task.metadata.runningBy}
-                              </p>
-                            )}
+                          <div className="col-span-3">
+                            <StatusBadge
+                              status={(wf.status || "draft").toLowerCase() as any}
+                              variant="subtle"
+                              className="uppercase text-[10px]"
+                            >
+                              {wf.status || "DRAFT"}
+                            </StatusBadge>
+                          </div>
+                          <div className="col-span-3 flex justify-end">
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => handleCloneWorkflow(wf._id)}
+                              disabled={cloningId === wf._id}
+                              title="Duplicate Workflow"
+                              className="size-7 opacity-0 group-hover:opacity-100 transition-opacity"
+                            >
+                              {cloningId === wf._id ? (
+                                <Loader2 className="size-3 animate-spin text-muted-foreground" />
+                              ) : (
+                                <Copy className="size-3 text-muted-foreground" />
+                              )}
+                            </Button>
                           </div>
                         </div>
                       ))
-                    ) : (
-                      <p className="text-sm text-muted-foreground opacity-70">No recent activity</p>
                     )}
                   </div>
-                </Card>
+                </div>
               </div>
-              
-            </div>
-
-            {/* Quick Actions */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-              {[
-                { title: "New Workflow", desc: "Start from a blank canvas", icon: Plus, href: "/workflows" },
-                { title: "Upload Document", desc: "Ingest PDF, TST, or JSON", icon: FileText, href: "/documents" },
-                { title: "AI Agent Generator", desc: "Generate agent management", icon: Wand2, href: "/agents" },
-                { title: "Manage Connections", desc: "Manage connection tokens", icon: Link2, href: "/settings" }
-              ].map((action, i) => (
-                <Link href={action.href} key={i}>
-                  <Card className="p-4 flex items-center gap-4 border-border/30 bg-card/20 shadow-sm rounded-xl hover:bg-card/40 hover:border-border/50 transition-all cursor-pointer group h-full">
-                    <div className="flex items-center justify-center size-10 rounded-md bg-muted/30 border border-border/30 group-hover:bg-primary/10 transition-colors">
-                      <action.icon className="size-5 text-muted-foreground group-hover:text-primary transition-colors" />
-                    </div>
-                    <div>
-                      <p className="text-sm font-medium text-foreground/90">{action.title}</p>
-                      <p className="text-xs text-muted-foreground/60">{action.desc}</p>
-                    </div>
-                  </Card>
-                </Link>
-              ))}
-            </div>
+            </Card>
           </div>
+
+          {/* Right Side: Live Feed (Activity) */}
+          <div className="lg:col-span-1 flex">
+            <LiveActivityFeed
+              items={recentTasks.map((task) => ({
+                id: task._id,
+                timestamp: task.startedAt,
+                workflowName: task.name,
+                status: task.status,
+                connection: task.metadata?.runningBy,
+              }))}
+              loading={tasksLoading}
+            />
+          </div>
+          
+        </div>
+
+        {/* Quick Actions */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          {[
+            { title: "New Workflow", desc: "Start from a blank canvas", icon: Plus, href: "/workflows" },
+            { title: "Upload Document", desc: "Ingest PDF, TST, or JSON", icon: FileText, href: "/documents" },
+            { title: "AI Agent Generator", desc: "Generate agent management", icon: Wand2, href: "/agents" },
+            { title: "Manage Connections", desc: "Manage connection tokens", icon: Link2, href: "/settings" }
+          ].map((action, i) => (
+            <Link href={action.href} key={i}>
+              <Card className="p-4 flex items-center gap-4 border-border/30 bg-card/20 shadow-sm rounded-xl hover:bg-card/40 hover:border-border/50 transition-all cursor-pointer group h-full">
+                <div className="flex items-center justify-center size-10 rounded-md bg-muted/30 border border-border/30 group-hover:bg-primary/10 transition-colors">
+                  <action.icon className="size-5 text-muted-foreground group-hover:text-primary transition-colors" />
+                </div>
+                <div>
+                  <p className="text-sm font-medium text-foreground/90">{action.title}</p>
+                  <p className="text-xs text-muted-foreground/60">{action.desc}</p>
+                </div>
+              </Card>
+            </Link>
+          ))}
+        </div>
+      </div>
     </>
   );
 }
